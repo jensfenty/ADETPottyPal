@@ -75,6 +75,8 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
       imageColor: widget.restroom.imageColor,
       imagePath: widget.restroom.imagePath,
       imageBytes: widget.restroom.imageBytes,
+      photoPaths: widget.restroom.photoPaths,
+      photoBytesList: widget.restroom.photoBytesList,
       imageAlignment: widget.restroom.imageAlignment,
       name: _nameController.text.trim(),
       address: _addressController.text.trim(),

@@ -229,6 +229,8 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
         imageColor: const Color(0xFF1976D2),
         imagePath: _selectedImages.first.path,
         imageBytes: _selectedImages.first.bytes,
+        photoPaths: _selectedImages.map((img) => img.path).toList(),
+        photoBytesList: _selectedImages.map((img) => img.bytes).toList(),
         name: _nameController.text,
         address: _addressController.text,
         distance: '0 m away',

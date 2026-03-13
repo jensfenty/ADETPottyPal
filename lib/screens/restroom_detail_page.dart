@@ -267,20 +267,39 @@ class RestroomDetailPage extends StatelessWidget {
                         crossAxisSpacing: 6,
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        children: List.generate(
-                          3,
-                          (index) => Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey.shade200,
-                            ),
-                            child: Image(
-                              image: restroom.imageProvider,
-                              fit: BoxFit.cover,
-                              alignment: restroom.imageAlignment,
-                            ),
-                          ),
-                        ),
+                        children: restroom.photoProviders
+                            .asMap()
+                            .entries
+                            .map(
+                              (entry) => GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => _PhotoViewerPage(
+                                        photos: restroom.photoProviders,
+                                        initialIndex: entry.key,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    color: Colors.grey.shade200,
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image(
+                                      image: entry.value,
+                                      fit: BoxFit.cover,
+                                      alignment: restroom.imageAlignment,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                     ),
                   ),
@@ -360,6 +379,122 @@ class RestroomDetailPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PhotoViewerPage extends StatefulWidget {
+  final List<ImageProvider> photos;
+  final int initialIndex;
+
+  const _PhotoViewerPage({required this.photos, required this.initialIndex});
+
+  @override
+  State<_PhotoViewerPage> createState() => _PhotoViewerPageState();
+}
+
+class _PhotoViewerPageState extends State<_PhotoViewerPage> {
+  late final PageController _pageController;
+  late int _currentIndex;
+
+  void _goToPrevious() {
+    if (_currentIndex <= 0) return;
+    _pageController.previousPage(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _goToNext() {
+    if (_currentIndex >= widget.photos.length - 1) return;
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+    _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text(
+          '${_currentIndex + 1}/${widget.photos.length}',
+          style: const TextStyle(color: Colors.white),
+        ),
+      ),
+      body: Stack(
+        children: [
+          PageView.builder(
+            controller: _pageController,
+            itemCount: widget.photos.length,
+            onPageChanged: (index) {
+              setState(() => _currentIndex = index);
+            },
+            itemBuilder: (context, index) {
+              return InteractiveViewer(
+                minScale: 1,
+                maxScale: 4,
+                child: Center(
+                  child: Image(
+                    image: widget.photos[index],
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              );
+            },
+          ),
+          Positioned(
+            left: 8,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: IconButton.filled(
+                onPressed: _currentIndex > 0 ? _goToPrevious : null,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                  disabledBackgroundColor: Colors.black26,
+                ),
+                icon: const Icon(Icons.chevron_left, color: Colors.white),
+                tooltip: 'Previous',
+              ),
+            ),
+          ),
+          Positioned(
+            right: 8,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: IconButton.filled(
+                onPressed: _currentIndex < widget.photos.length - 1
+                    ? _goToNext
+                    : null,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.black54,
+                  disabledBackgroundColor: Colors.black26,
+                ),
+                icon: const Icon(Icons.chevron_right, color: Colors.white),
+                tooltip: 'Next',
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
