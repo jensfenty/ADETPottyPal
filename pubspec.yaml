@@ -61,7 +61,7 @@ flutter:
     - assets/images/angeles-city-library.webp
     - assets/images/singku.webp
     - assets/images/sm-city-clark.webp
-    - assets/images/pottypal-logo.png
+    - assets/images/pottypal-logo.webp
     - assets/images/default-avatar.png
 
   # An image asset can refer to one or more resolution-specific "variants", see

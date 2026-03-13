@@ -31,6 +31,17 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
     'Accessible',
   ];
 
+  static const Map<String, IconData> _amenityIcons = {
+    'Soap': Icons.soap,
+    'Tissue': Icons.receipt_long,
+    'Spacious': Icons.zoom_out_map,
+    'PWD': Icons.accessible,
+    'Bidet': Icons.water_drop,
+    'Clean': Icons.cleaning_services,
+    'Lock': Icons.lock,
+    'Accessible': Icons.accessible,
+  };
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -83,10 +94,12 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
 
   void _validateAndSubmit() {
     setState(() {
-      _nameError =
-          _nameController.text.isEmpty ? 'Restroom name is required' : null;
-      _addressError =
-          _addressController.text.isEmpty ? 'Address is required' : null;
+      _nameError = _nameController.text.isEmpty
+          ? 'Restroom name is required'
+          : null;
+      _addressError = _addressController.text.isEmpty
+          ? 'Address is required'
+          : null;
       _imagesError = _selectedImages.isEmpty ? 'Add at least 1 photo' : null;
     });
 
@@ -184,15 +197,23 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
                 ),
               ),
               const SizedBox(height: 12),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _amenityOptions.map((amenity) {
-                    final isSelected = _selectedAmenities.contains(amenity);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: GestureDetector(
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final itemWidth = constraints.maxWidth < 330
+                      ? 52.0
+                      : constraints.maxWidth < 420
+                      ? 60.0
+                      : 64.0;
+                  final circleSize = constraints.maxWidth < 330 ? 44.0 : 52.0;
+                  final iconSize = constraints.maxWidth < 330 ? 18.0 : 20.0;
+
+                  return Wrap(
+                    alignment: WrapAlignment.start,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: _amenityOptions.map((amenity) {
+                      final isSelected = _selectedAmenities.contains(amenity);
+                      return GestureDetector(
                         onTap: () {
                           setState(() {
                             if (isSelected) {
@@ -202,53 +223,57 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
                             }
                           });
                         },
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
+                        child: SizedBox(
+                          width: itemWidth,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                width: circleSize,
+                                height: circleSize,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFF1565C0)
+                                        : Colors.grey.shade300,
+                                    width: 2,
+                                  ),
                                   color: isSelected
                                       ? const Color(0xFF1565C0)
-                                      : Colors.grey.shade300,
-                                  width: 2,
+                                      : Colors.transparent,
                                 ),
-                                color: isSelected
-                                    ? const Color(0xFF1565C0)
-                                    : Colors.transparent,
+                                child: Icon(
+                                  _amenityIcons[amenity] ??
+                                      Icons.check_circle_outline,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey.shade400,
+                                  size: iconSize,
+                                ),
                               ),
-                              child: isSelected
-                                  ? const Icon(
-                                      Icons.check,
-                                      color: Colors.white,
-                                      size: 20,
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(height: 6),
-                            SizedBox(
-                              width: 68,
-                              child: Text(
+                              const SizedBox(height: 6),
+                              Text(
                                 amenity,
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.black87,
+                                  color: isSelected
+                                      ? Colors.black87
+                                      : Colors.grey.shade400,
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      );
+                    }).toList(),
+                  );
+                },
               ),
               const SizedBox(height: 28),
               Row(
@@ -278,10 +303,7 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Text(
                     _imagesError!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.red,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.red),
                   ),
                 ),
               _selectedImages.isEmpty
@@ -421,10 +443,7 @@ class _AddRestroomPageState extends State<AddRestroomPage> {
                   ),
                   child: const Text(
                     'Create Restroom Location',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

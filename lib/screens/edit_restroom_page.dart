@@ -58,10 +58,12 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
 
   void _validateAndSave() {
     setState(() {
-      _nameError =
-          _nameController.text.trim().isEmpty ? 'Restroom name is required' : null;
-      _addressError =
-          _addressController.text.trim().isEmpty ? 'Address is required' : null;
+      _nameError = _nameController.text.trim().isEmpty
+          ? 'Restroom name is required'
+          : null;
+      _addressError = _addressController.text.trim().isEmpty
+          ? 'Address is required'
+          : null;
     });
 
     if (_nameError != null || _addressError != null) return;
@@ -223,13 +225,12 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
                 activeThumbColor: const Color(0xFF1565C0),
                 title: const Text(
                   'Currently Open',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                 ),
                 subtitle: Text(
-                  _isOpen ? 'Restroom is open to the public' : 'Restroom is currently closed',
+                  _isOpen
+                      ? 'Restroom is open to the public'
+                      : 'Restroom is currently closed',
                   style: TextStyle(
                     fontSize: 12,
                     color: _isOpen ? Colors.green[700] : Colors.red[400],
@@ -252,15 +253,23 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: _amenityOptions.map((amenity) {
-                      final isSelected = _selectedAmenities.contains(amenity);
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: GestureDetector(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final itemWidth = constraints.maxWidth < 330
+                        ? 52.0
+                        : constraints.maxWidth < 420
+                        ? 60.0
+                        : 64.0;
+                    final circleSize = constraints.maxWidth < 330 ? 44.0 : 52.0;
+                    final iconSize = constraints.maxWidth < 330 ? 18.0 : 22.0;
+
+                    return Wrap(
+                      alignment: WrapAlignment.start,
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: _amenityOptions.map((amenity) {
+                        final isSelected = _selectedAmenities.contains(amenity);
+                        return GestureDetector(
                           onTap: () {
                             setState(() {
                               if (isSelected) {
@@ -270,38 +279,38 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
                               }
                             });
                           },
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                width: 52,
-                                height: 52,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
+                          child: SizedBox(
+                            width: itemWidth,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  width: circleSize,
+                                  height: circleSize,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? const Color(0xFF1565C0)
+                                          : Colors.grey.shade300,
+                                      width: 2,
+                                    ),
                                     color: isSelected
                                         ? const Color(0xFF1565C0)
-                                        : Colors.grey.shade300,
-                                    width: 2,
+                                        : Colors.white,
                                   ),
-                                  color: isSelected
-                                      ? const Color(0xFF1565C0)
-                                      : Colors.white,
+                                  child: Icon(
+                                    _amenityIcons[amenity] ??
+                                        Icons.check_circle_outline,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.grey.shade400,
+                                    size: iconSize,
+                                  ),
                                 ),
-                                child: Icon(
-                                  _amenityIcons[amenity] ??
-                                      Icons.check_circle_outline,
-                                  color: isSelected
-                                      ? Colors.white
-                                      : Colors.grey.shade400,
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              SizedBox(
-                                width: 64,
-                                child: Text(
+                                const SizedBox(height: 6),
+                                Text(
                                   amenity,
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
@@ -314,13 +323,13 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
               ),
             ),
@@ -374,10 +383,7 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
     );
   }
 
-  InputDecoration _inputDecoration({
-    required String hint,
-    String? errorText,
-  }) {
+  InputDecoration _inputDecoration({required String hint, String? errorText}) {
     return InputDecoration(
       hintText: hint,
       errorText: errorText,
@@ -395,6 +401,7 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
     );
   }
 }
+
 class _SectionLabel extends StatelessWidget {
   final String text;
   const _SectionLabel({required this.text});

@@ -129,7 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/images/pottypal-logo.png', height: 70),
+            Image.asset('assets/images/pottypal-logo.webp', height: 70),
             const SizedBox(width: 5),
             const Text(
               'PottyPal',
@@ -254,13 +254,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               // Restroom cards
-               Expanded(
+              Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.only(bottom: 100),
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final restroom = filtered[index];
-                    final restroomIndex = _restrooms.indexWhere((r) => identical(r, restroom));
+                    final restroomIndex = _restrooms.indexWhere(
+                      (r) => identical(r, restroom),
+                    );
                     return RestroomCard(
                       restroom: restroom,
                       onTap: () async {
@@ -274,18 +276,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         if (!context.mounted) return;
                         if (result == 'deleted') {
                           setState(() {
-                            if (restroomIndex != -1) _restrooms.removeAt(restroomIndex);
+                            if (restroomIndex != -1)
+                              _restrooms.removeAt(restroomIndex);
                           });
                         } else if (result is Restroom) {
                           setState(() {
-                            if (restroomIndex != -1) _restrooms[restroomIndex] = result;
+                            if (restroomIndex != -1)
+                              _restrooms[restroomIndex] = result;
                           });
                         }
                       },
                     );
                   },
-                )
-          )],
+                ),
+              ),
+            ],
           ),
           const MapPage(),
           const AboutPage(),
@@ -349,13 +354,15 @@ class RestroomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap ?? () => Navigator.push(
-        context,
-        slideRoute(
-          page: RestroomDetailPage(restroom: restroom),
-          fromRight: true,
-        ),
-      ),
+      onTap:
+          onTap ??
+          () => Navigator.push(
+            context,
+            slideRoute(
+              page: RestroomDetailPage(restroom: restroom),
+              fromRight: true,
+            ),
+          ),
       child: Card(
         elevation: 4,
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
