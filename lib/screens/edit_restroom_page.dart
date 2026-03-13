@@ -1,5 +1,18 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/restroom.dart';
+
+enum _PhotoSource { camera, gallery }
+
+class _EditablePhoto {
+  final String path;
+  final Uint8List? bytes;
+
+  const _EditablePhoto({required this.path, this.bytes});
+}
 
 class EditRestroomPage extends StatefulWidget {
   final Restroom restroom;
@@ -13,10 +26,13 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _addressController;
   late final Set<String> _selectedAmenities;
+  late final List<_EditablePhoto> _editablePhotos;
   late bool _isOpen;
+  final ImagePicker _imagePicker = ImagePicker();
 
   String? _nameError;
   String? _addressError;
+  String? _photosError;
 
   final List<String> _amenityOptions = [
     'Soap',
@@ -49,6 +65,15 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
     _nameController = TextEditingController(text: widget.restroom.name);
     _addressController = TextEditingController(text: widget.restroom.address);
     _selectedAmenities = Set<String>.from(widget.restroom.amenities);
+    final initialPaths = widget.restroom.photoPaths.isNotEmpty
+        ? widget.restroom.photoPaths
+        : [widget.restroom.imagePath];
+    _editablePhotos = List.generate(initialPaths.length, (index) {
+      final bytes = index < widget.restroom.photoBytesList.length
+          ? widget.restroom.photoBytesList[index]
+          : (index == 0 ? widget.restroom.imageBytes : null);
+      return _EditablePhoto(path: initialPaths[index], bytes: bytes);
+    });
     _isOpen = widget.restroom.isOpen;
   }
 
@@ -59,6 +84,170 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
     super.dispose();
   }
 
+  ImageProvider _photoProvider(_EditablePhoto photo) {
+    if (photo.path.startsWith('assets/')) {
+      return AssetImage(photo.path);
+    }
+    if (photo.bytes != null) {
+      return MemoryImage(photo.bytes!);
+    }
+    if (kIsWeb) {
+      return const AssetImage('assets/images/pottypal-logo.webp');
+    }
+    return FileImage(File(photo.path));
+  }
+
+  Future<void> _pickFromCamera() async {
+    if (_editablePhotos.length >= 4) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 4 photos allowed'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null && mounted) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _editablePhotos.add(
+            _EditablePhoto(path: pickedFile.path, bytes: bytes),
+          );
+          _photosError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    if (_editablePhotos.length >= 4) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 4 photos allowed'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      return;
+    }
+
+    final remainingSlots = 4 - _editablePhotos.length;
+
+    try {
+      final List<XFile> pickedFiles = await _imagePicker.pickMultiImage(
+        imageQuality: 80,
+      );
+
+      if (pickedFiles.isEmpty || !mounted) return;
+
+      final limitedFiles = pickedFiles.take(remainingSlots).toList();
+      final bytesList = await Future.wait(
+        limitedFiles.map((file) => file.readAsBytes()),
+      );
+
+      setState(() {
+        _editablePhotos.addAll(
+          List.generate(
+            limitedFiles.length,
+            (index) => _EditablePhoto(
+              path: limitedFiles[index].path,
+              bytes: bytesList[index],
+            ),
+          ),
+        );
+        _photosError = null;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showPhotoSourcePicker() async {
+    if (_editablePhotos.length >= 4) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Maximum 4 photos allowed'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      return;
+    }
+
+    final source = await showModalBottomSheet<_PhotoSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take Photo'),
+              onTap: () => Navigator.pop(ctx, _PhotoSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, _PhotoSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || source == null) return;
+
+    if (source == _PhotoSource.camera) {
+      await _pickFromCamera();
+    } else {
+      await _pickFromGallery();
+    }
+  }
+
+  void _removePhoto(int index) {
+    if (_editablePhotos.length == 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('At least 1 photo is required.'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _editablePhotos.removeAt(index);
+      _photosError = null;
+    });
+  }
+
   void _validateAndSave() {
     setState(() {
       _nameError = _nameController.text.trim().isEmpty
@@ -67,16 +256,24 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
       _addressError = _addressController.text.trim().isEmpty
           ? 'Address is required'
           : null;
+      _photosError = _editablePhotos.isEmpty ? 'Add at least 1 photo' : null;
     });
 
-    if (_nameError != null || _addressError != null) return;
+    if (_nameError != null || _addressError != null || _photosError != null) {
+      return;
+    }
+
+    final firstPhoto = _editablePhotos.first;
 
     final updated = Restroom(
       imageColor: widget.restroom.imageColor,
-      imagePath: widget.restroom.imagePath,
-      imageBytes: widget.restroom.imageBytes,
-      photoPaths: widget.restroom.photoPaths,
-      photoBytesList: widget.restroom.photoBytesList,
+      imagePath: firstPhoto.path,
+      imageBytes: firstPhoto.bytes,
+      photoPaths: _editablePhotos.map((p) => p.path).toList(),
+      photoBytesList: _editablePhotos
+          .where((p) => p.bytes != null)
+          .map((p) => p.bytes!)
+          .toList(),
       imageAlignment: widget.restroom.imageAlignment,
       name: _nameController.text.trim(),
       address: _addressController.text.trim(),
@@ -219,6 +416,111 @@ class _EditRestroomPageState extends State<EditRestroomPage> {
                 errorText: _addressError,
               ),
             ),
+
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const _SectionLabel(text: 'Photos'),
+                Text(
+                  '${_editablePhotos.length}/4',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_photosError != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  _photosError!,
+                  style: const TextStyle(fontSize: 12, color: Colors.red),
+                ),
+              ),
+            GridView.count(
+              crossAxisCount: 2,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              children: List.generate(
+                _editablePhotos.length,
+                (index) => Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image(
+                        image: _photoProvider(_editablePhotos[index]),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: GestureDetector(
+                        onTap: () => _removePhoto(index),
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withValues(alpha: 0.6),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            if (_editablePhotos.length < 4)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: GestureDetector(
+                  onTap: _showPhotoSourcePicker,
+                  child: Container(
+                    width: double.infinity,
+                    height: 110,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        width: 1.5,
+                      ),
+                      color: Colors.grey.shade100,
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_photo_alternate_outlined,
+                          size: 30,
+                          color: Colors.grey.shade500,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Add More Photos',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             const SizedBox(height: 20),
             Card(
