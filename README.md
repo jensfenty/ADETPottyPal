@@ -1,16 +1,22 @@
-# wander_list
+﻿# PottyPal
 
-A new Flutter project.
+PottyPal is a Flutter restroom finder app. For Milestone 3, the app now uses
+the `http` package to request restroom data from a real OpenStreetMap Overpass
+API endpoint, parses the JSON response, and converts each result into a
+`Restroom` model with `fromJson()`.
 
-## Getting Started
+## RESTful API Short Explanation
 
-This project is a starting point for a Flutter application.
+A RESTful API is a web service that lets an app communicate with data through
+standard HTTP methods such as `GET`, `POST`, `PUT`, and `DELETE`. In this
+project, PottyPal uses an HTTP `GET` request to ask an API for restroom data,
+receives the result as JSON, and then maps that JSON into Dart model objects so
+the app can display the data correctly.
 
-A few resources to get you started if this is your first Flutter project:
+## Milestone 3 API Flow
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Send a `GET` request using the `http` package
+- Receive restroom/location data from the Overpass API
+- Decode the JSON response with `jsonDecode`
+- Convert each restroom entry into a `Restroom` object through `fromJson()`
+- Show loading, success, and error states in the app UI

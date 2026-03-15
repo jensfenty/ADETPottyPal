@@ -1,11 +1,13 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+
 import 'models/restroom.dart';
-import 'screens/restroom_detail_page.dart';
-import 'screens/rate_restroom_page.dart';
+import 'screens/about_page.dart';
 import 'screens/add_restroom_page.dart';
 import 'screens/map_page.dart';
-import 'screens/about_page.dart';
 import 'screens/profile_page.dart';
+import 'screens/rate_restroom_page.dart';
+import 'screens/restroom_detail_page.dart';
+import 'services/restroom_api_service.dart';
 import 'utils/slide_route.dart';
 
 void main() {
@@ -42,50 +44,14 @@ class _HomeScreenState extends State<HomeScreen> {
   String _searchQuery = '';
   final _searchController = TextEditingController();
   final _pageController = PageController();
-  late List<Restroom> _restrooms;
+  List<Restroom> _restrooms = [];
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _restrooms = [
-      Restroom(
-        imageColor: const Color(0xFF0D47A1),
-        imagePath: 'assets/images/angeles-city-library.webp',
-        name: 'Angeles City Library',
-        address: 'Sto. Rosario St, Angeles City',
-        distance: '55 m away',
-        rating: 4.1,
-        reviewCount: 28,
-        amenities: ['Soap', 'Tissue', 'Lock', 'PWD'],
-        cardColor: const Color(0xFFE3F2FD),
-        isOpen: true,
-      ),
-      Restroom(
-        imageColor: const Color(0xFF1976D2),
-        imagePath: 'assets/images/singku.webp',
-        imageAlignment: const Alignment(0, -0.7),
-        name: 'Singku Cafe',
-        address: 'MacArthur Hwy, Angeles City',
-        distance: '120 m away',
-        rating: 3.8,
-        reviewCount: 14,
-        amenities: ['Bidet', 'Soap', 'Lock'],
-        cardColor: const Color(0xFFE3F2FD),
-        isOpen: true,
-      ),
-      Restroom(
-        imageColor: const Color(0xFF42A5F5),
-        imagePath: 'assets/images/sm-city-clark.webp',
-        name: 'SM City Clark',
-        address: 'Jose Abad Santos Ave, Clark',
-        distance: '340 m away',
-        rating: 4.6,
-        reviewCount: 87,
-        amenities: ['Bidet', 'Soap', 'Tissue', 'Lock', 'PWD'],
-        cardColor: const Color(0xFFE3F2FD),
-        isOpen: false,
-      ),
-    ];
+    _loadRestrooms();
   }
 
   @override
@@ -106,6 +72,33 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _loadRestrooms({bool showLoading = true}) async {
+    setState(() {
+      if (showLoading) {
+        _isLoading = true;
+      }
+      _errorMessage = null;
+    });
+
+    try {
+      final restrooms = await RestroomApiService.fetchRestrooms();
+
+      if (!mounted) return;
+
+      setState(() {
+        _restrooms = restrooms;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Unable to load restroom data right now. $error';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filtered = _filtered.where((r) {
@@ -116,9 +109,10 @@ class _HomeScreenState extends State<HomeScreen> {
           r.amenities.any((a) => a.toLowerCase().contains(q));
     }).toList();
     final openCount = _restrooms.where((r) => r.isOpen).length;
-    final avgRating =
-        (_restrooms.fold(0.0, (s, r) => s + r.rating) / _restrooms.length)
-            .toStringAsFixed(1);
+    final avgRating = _restrooms.isEmpty
+        ? '0.0'
+        : (_restrooms.fold(0.0, (s, r) => s + r.rating) / _restrooms.length)
+              .toStringAsFixed(1);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
@@ -149,7 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search bar
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                 child: Container(
@@ -180,7 +173,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              // Stat cards
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
                 child: Row(
@@ -208,7 +200,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Section header + filter chips
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                 child: Column(
@@ -253,43 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Restroom cards
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 100),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final restroom = filtered[index];
-                    final restroomIndex = _restrooms.indexWhere(
-                      (r) => identical(r, restroom),
-                    );
-                    return RestroomCard(
-                      restroom: restroom,
-                      onTap: () async {
-                        final result = await Navigator.push<Object?>(
-                          context,
-                          slideRoute(
-                            page: RestroomDetailPage(restroom: restroom),
-                            fromRight: true,
-                          ),
-                        );
-                        if (!context.mounted) return;
-                        if (result == 'deleted') {
-                          setState(() {
-                            if (restroomIndex != -1)
-                              _restrooms.removeAt(restroomIndex);
-                          });
-                        } else if (result is Restroom) {
-                          setState(() {
-                            if (restroomIndex != -1)
-                              _restrooms[restroomIndex] = result;
-                          });
-                        }
-                      },
-                    );
-                  },
-                ),
-              ),
+              Expanded(child: _buildRestroomContent(filtered)),
             ],
           ),
           const MapPage(),
@@ -340,6 +295,102 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         backgroundColor: const Color(0xFF1565C0),
         child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildRestroomContent(List<Restroom> filtered) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 48,
+                color: Colors.blueGrey,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.blueGrey),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _loadRestrooms,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1565C0),
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (filtered.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: const [
+          SizedBox(height: 120),
+          Center(
+            child: Text(
+              'No restroom results found from the API.',
+              style: TextStyle(color: Colors.blueGrey),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _loadRestrooms(showLoading: false),
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 100),
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          final restroom = filtered[index];
+          final restroomIndex = _restrooms.indexWhere(
+            (r) => identical(r, restroom),
+          );
+
+          return RestroomCard(
+            restroom: restroom,
+            onTap: () async {
+              final result = await Navigator.push<Object?>(
+                context,
+                slideRoute(
+                  page: RestroomDetailPage(restroom: restroom),
+                  fromRight: true,
+                ),
+              );
+              if (!context.mounted) return;
+              if (result == 'deleted') {
+                setState(() {
+                  if (restroomIndex != -1) {
+                    _restrooms.removeAt(restroomIndex);
+                  }
+                });
+              } else if (result is Restroom) {
+                setState(() {
+                  if (restroomIndex != -1) {
+                    _restrooms[restroomIndex] = result;
+                  }
+                });
+              }
+            },
+          );
+        },
       ),
     );
   }
@@ -488,7 +539,6 @@ class RestroomCard extends StatelessWidget {
                 ),
               ],
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
               child: Column(
@@ -519,7 +569,6 @@ class RestroomCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-
                   Row(
                     children: [
                       const Icon(
@@ -540,7 +589,6 @@ class RestroomCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
@@ -549,7 +597,6 @@ class RestroomCard extends StatelessWidget {
                         .toList(),
                   ),
                   const SizedBox(height: 14),
-
                   Row(
                     children: [
                       Expanded(
