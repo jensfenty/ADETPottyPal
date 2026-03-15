@@ -15,7 +15,9 @@ void main() {
 }
 
 class PottyPalApp extends StatelessWidget {
-  const PottyPalApp({super.key});
+  final Future<List<Restroom>> Function()? restroomLoader;
+
+  const PottyPalApp({super.key, this.restroomLoader});
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +28,15 @@ class PottyPalApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1976D2)),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(restroomLoader: restroomLoader),
     );
   }
 }
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Future<List<Restroom>> Function()? restroomLoader;
+
+  const HomeScreen({super.key, this.restroomLoader});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -81,7 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final restrooms = await RestroomApiService.fetchRestrooms();
+      final loader = widget.restroomLoader ?? RestroomApiService.fetchRestrooms;
+      final restrooms = await loader();
 
       if (!mounted) return;
 

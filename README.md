@@ -20,3 +20,29 @@ the app can display the data correctly.
 - Decode the JSON response with `jsonDecode`
 - Convert each restroom entry into a `Restroom` object through `fromJson()`
 - Show loading, success, and error states in the app UI
+
+## Beyond The Minimum
+
+PottyPal now includes basic offline support. When a restroom request succeeds,
+the raw JSON response is cached locally using `shared_preferences`. If a later
+request fails because the device is offline or the API is unavailable, the app
+falls back to the most recently cached restroom list instead of showing an
+empty screen immediately.
+
+The project also now includes unit tests for:
+
+- API fetching and JSON parsing
+- Offline cache fallback behavior
+- `Restroom.fromJson()` model mapping
+
+## Still Needed For Google Maps / Google Places
+
+The current project does not yet integrate the Google Places API or Google Maps
+SDK. That part needs:
+
+- a Google Cloud project
+- an API key
+- the chosen Flutter package and platform setup for Android/iOS
+
+Until those are added, the map tab remains a placeholder screen rather than a
+live Google map.
